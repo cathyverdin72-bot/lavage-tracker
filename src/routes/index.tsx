@@ -1,24 +1,114 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { StatusTimeline } from "@/components/StatusTimeline";
+import { findByCode, useJobs, type Job } from "@/lib/jobs-store";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Track Your Vehicle | Lavage International" },
+      {
+        name: "description",
+        content:
+          "Enter your Lavage International tracking code to follow your vehicle's wash and detailing progress in real time.",
+      },
+      { property: "og:title", content: "Track Your Vehicle | Lavage International" },
+      {
+        property: "og:description",
+        content: "Follow your car wash and detailing progress with your Lavage International tracking code.",
+      },
+    ],
+  }),
+  component: TrackPage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function TrackPage() {
+  const jobs = useJobs();
+  const [code, setCode] = useState("");
+  const [job, setJob] = useState<Job | null>(null);
+  const [error, setError] = useState("");
+
+  const liveJob = job ? (jobs.find((j) => j.id === job.id) ?? job) : null;
+
+  function search(e: React.FormEvent) {
+    e.preventDefault();
+    const found = findByCode(code);
+    if (found) {
+      setJob(found);
+      setError("");
+    } else {
+      setJob(null);
+      setError("No vehicle found for that tracking code.");
+    }
+  }
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <AppShell>
+      <section>
+        <form onSubmit={search} className="rounded-2xl border border-border bg-card p-6 shadow-xl">
+          <label
+            htmlFor="code"
+            className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+          >
+            Enter Tracking Code
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="LVG-1001"
+              autoCapitalize="characters"
+              className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-3 text-lg font-bold tracking-widest text-card-foreground transition-colors placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-xl bg-secondary px-5 py-4 font-bold text-primary active:scale-95"
+            >
+              GO
+            </button>
+          </div>
+          {error && <p className="mt-3 text-xs font-medium text-destructive">{error}</p>}
+          <p className="mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Try LVG-1001, LVG-1002 or LVG-1003
+          </p>
+        </form>
+      </section>
+
+      {liveJob && (
+        <section className="space-y-4">
+          <div className="flex items-end justify-between">
+            <h2 className="text-lg font-bold text-card-foreground">Current Status</h2>
+            <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold uppercase text-primary">
+              {liveJob.code}
+            </span>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+              <div className="min-w-0">
+                <p className="text-2xl font-bold text-card-foreground">{liveJob.vehicle}</p>
+                <p className="font-mono text-sm text-muted-foreground">PLATE: {liveJob.plate}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase text-muted-foreground">Service</p>
+                <p className="text-sm font-bold text-card-foreground">{liveJob.service}</p>
+              </div>
+            </div>
+
+            <StatusTimeline job={liveJob} />
+
+            <button
+              type="button"
+              onClick={() => setJob(findByCode(liveJob.code) ?? liveJob)}
+              className="mt-6 w-full rounded-xl border border-border bg-background py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground active:bg-secondary"
+            >
+              Refresh Progress
+            </button>
+          </div>
+        </section>
+      )}
+    </AppShell>
   );
 }
