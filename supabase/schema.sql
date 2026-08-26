@@ -150,3 +150,25 @@ values
   ('LAV-1002', 'Kwame Mensah', '+225 05 88 22 10', 'Mercedes-Benz C300', 'ZY-9920-CI', 'Ceramic Coating', 'Quality Check', 'Minor scratch on rear bumper noted at intake.'),
   ('LAV-1003', 'Sarah Kouassi', '+225 01 44 55 66', 'Hyundai Tucson', 'KL-3388-CI', 'Exterior Wash', 'Ready for Pickup', 'Paid at reception.')
 on conflict (tracking_code) do nothing;
+
+-- Backfill a realistic timeline for the sample jobs
+insert into public.job_status_history (job_id, status, changed_at)
+select j.id, s.status::public.job_status, now() - s.ago
+from public.jobs j
+join (values
+  ('LAV-1001','Car Received', interval '180 minutes'),
+  ('LAV-1001','Inspection',   interval '140 minutes'),
+  ('LAV-1002','Car Received', interval '400 minutes'),
+  ('LAV-1002','Inspection',   interval '370 minutes'),
+  ('LAV-1002','Washing',      interval '300 minutes'),
+  ('LAV-1002','Detailing',    interval '180 minutes'),
+  ('LAV-1003','Car Received', interval '240 minutes'),
+  ('LAV-1003','Inspection',   interval '225 minutes'),
+  ('LAV-1003','Washing',      interval '190 minutes'),
+  ('LAV-1003','Detailing',    interval '150 minutes'),
+  ('LAV-1003','Quality Check',interval '120 minutes')
+) as s(code, status, ago) on s.code = j.tracking_code
+where not exists (
+  select 1 from public.job_status_history h
+  where h.job_id = j.id and h.status = s.status::public.job_status
+);
