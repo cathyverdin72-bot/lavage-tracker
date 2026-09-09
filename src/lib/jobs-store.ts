@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
 export const STATUSES = [
   "Car Received",
   "Inspection",
@@ -10,9 +9,7 @@ export const STATUSES = [
   "Ready for Pickup",
   "Completed",
 ] as const;
-
 export type Status = (typeof STATUSES)[number];
-
 export const SERVICES = [
   "Exterior Wash",
   "Interior Deep Clean",
@@ -21,14 +18,11 @@ export const SERVICES = [
   "Full Detailing",
   "Ceramic Coating",
 ] as const;
-
 export type Service = (typeof SERVICES)[number];
-
 export type StatusHistoryEntry = {
   status: Status;
   at: string;
 };
-
 export type Job = {
   id: string;
   trackingCode: string;
@@ -40,54 +34,57 @@ export type Job = {
   updatedAt: string;
   history: StatusHistoryEntry[];
 };
-
 export type StaffJob = Job & {
   customerName: string;
   phone: string;
   notes: string;
 };
-
 type DatabaseJob = {
-  id: string;
+  id: string | number;
   tracking_code: string;
   customer_name: string;
-  phone: string;
-  vehicle: string;
-  plate: string;
+  phone: string | null;
+  vehicle: string | null;
+  plate: string | null;
   service: string;
-  status: Status;
+  status: string;
   notes: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
   job_status_history?: Array<{
-    status: Status;
+    status: string;
     changed_at: string;
   }>;
 };
-
 type PublicLookupRow = {
-  id?: string;
+  id?: string | number;
   tracking_code: string;
-  vehicle: string;
-  plate: string;
+  vehicle: string | null;
+  plate: string | null;
   service: string;
-  status: Status;
+  status: string;
   created_at: string;
-  updated_at: string;
-  history: Array<{
-    status: Status;
-    at: string;
-  }> | null;
+  updated_at: string | null;
+  history:
+    | Array<{
+        status: string;
+        at: string;
+      }>
+    | null;
 };
-
 function isValidStatus(value: string): value is Status {
   return STATUSES.includes(value as Status);
 }
-
+function normalizeStatus(value: string): Status {
+  if (isValidStatus(value)) {
+    return value;
+  }
+  throw new Error(`Invalid status returned by database: ${value}`);
+}
 function normalizeHistory(
   history:
     | Array<{
-        status: Status;
+        status: string;
         changed_at: string;
       }>
     | null
@@ -96,11 +93,10 @@ function normalizeHistory(
   if (!history) {
     return [];
   }
-
   return history
     .filter((entry) => isValidStatus(entry.status))
     .map((entry) => ({
-      status: entry.status,
+      status: normalizeStatus(entry.status),
       at: entry.changed_at,
     }))
     .sort(
@@ -109,38 +105,36 @@ function normalizeHistory(
         new Date(b.at).getTime(),
     );
 }
-
 function toStaffJob(row: DatabaseJob): StaffJob {
   return {
-    id: row.id,
+    id: String(row.id),
     trackingCode: row.tracking_code,
     customerName: row.customer_name,
-    phone: row.phone,
-    vehicle: row.vehicle,
-    plate: row.plate,
+    phone: row.phone ?? "",
+    vehicle: row.vehicle ?? "",
+    plate: row.plate ?? "",
     service: row.service,
-    status: row.status,
+    status: normalizeStatus(row.status),
     notes: row.notes ?? "",
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: row.updated_at ?? row.created_at,
     history: normalizeHistory(row.job_status_history),
   };
 }
-
 function toCustomerJob(row: PublicLookupRow): Job {
   return {
-    id: row.id ?? row.tracking_code,
+    id: String(row.id ?? row.tracking_code),
     trackingCode: row.tracking_code,
-    vehicle: row.vehicle,
-    plate: row.plate,
+    vehicle: row.vehicle ?? "",
+    plate: row.plate ?? "",
     service: row.service,
-    status: row.status,
+    status: normalizeStatus(row.status),
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: row.updated_at ?? row.created_at,
     history: (row.history ?? [])
       .filter((entry) => isValidStatus(entry.status))
       .map((entry) => ({
-        status: entry.status,
+        status: normalizeStatus(entry.status),
         at: entry.at,
       }))
       .sort(
@@ -150,45 +144,41 @@ function toCustomerJob(row: PublicLookupRow): Job {
       ),
   };
 }
-
 /**
  * Customer-safe lookup.
  *
- * This calls the database RPC instead of querying the jobs table directly.
- * The RPC intentionally does NOT expose customer phone numbers or staff notes.
+ * Calls the database RPC instead of querying the jobs table directly.
+ * The RPC intentionally does NOT expose customer phone numbers
+ * or internal staff notes.
  */
 export async function lookupJob(
   code: string,
 ): Promise<Job | null> {
   const normalizedCode = code.trim().toUpperCase();
-
   if (!normalizedCode) {
     return null;
   }
-
   const { data, error } = await supabase.rpc(
     "public_job_lookup",
     {
       p_code: normalizedCode,
     },
   );
-
   if (error) {
     console.error("Customer job lookup failed:", error);
     throw new Error("Unable to load vehicle progress.");
   }
-
   const rows = (data ?? []) as PublicLookupRow[];
-
   if (rows.length === 0) {
     return null;
   }
-
   return toCustomerJob(rows[0]);
 }
-
 /**
  * Loads all jobs for authenticated staff.
+ *
+ * This requires the authenticated user to have the appropriate
+ * Supabase RLS permissions on the jobs table.
  */
 export async function listJobs(): Promise<StaffJob[]> {
   const { data, error } = await supabase
@@ -203,22 +193,18 @@ export async function listJobs(): Promise<StaffJob[]> {
       `,
     )
     .order("created_at", { ascending: false });
-
   if (error) {
     console.error("Failed to load staff jobs:", error);
     throw new Error("Unable to load jobs.");
   }
-
   return ((data ?? []) as DatabaseJob[]).map(toStaffJob);
 }
-
 /**
- * Creates a job through a database RPC.
+ * Creates a job through the PostgreSQL RPC.
  *
- * IMPORTANT:
- * Tracking-code generation now happens inside PostgreSQL while holding
- * an advisory transaction lock. This prevents two staff members from
- * receiving the same LAV-xxxx code at the same time.
+ * Tracking-code generation happens inside PostgreSQL while
+ * holding an advisory transaction lock. This prevents duplicate
+ * tracking codes when multiple staff members create jobs.
  */
 export async function createJob(input: {
   customerName: string;
@@ -235,31 +221,24 @@ export async function createJob(input: {
   const plate = input.plate.trim().toUpperCase();
   const service = input.service.trim();
   const notes = input.notes.trim();
-
   if (!customerName) {
     throw new Error("Customer name is required.");
   }
-
   if (!phone) {
     throw new Error("Phone number is required.");
   }
-
   if (!vehicle) {
     throw new Error("Vehicle make/model is required.");
   }
-
   if (!plate) {
     throw new Error("Plate number is required.");
   }
-
   if (!service) {
     throw new Error("Service is required.");
   }
-
   if (!isValidStatus(input.status)) {
     throw new Error("Invalid initial status.");
   }
-
   const { data, error } = await supabase.rpc(
     "create_staff_job",
     {
@@ -272,10 +251,8 @@ export async function createJob(input: {
       p_notes: notes || null,
     },
   );
-
   if (error) {
     console.error("Failed to create job:", error);
-
     if (
       error.code === "23505" ||
       error.message.toLowerCase().includes("duplicate")
@@ -284,26 +261,33 @@ export async function createJob(input: {
         "A tracking code conflict occurred. Please try creating the job again.",
       );
     }
-
+    if (
+      error.message.toLowerCase().includes("authentication required")
+    ) {
+      throw new Error(
+        "You must be signed in to the Staff Portal to create a job.",
+      );
+    }
     throw new Error(
       error.message || "Unable to create job.",
     );
   }
-
-  const rows = (data ?? []) as DatabaseJob[];
-
-  if (rows.length === 0) {
-    throw new Error("Job was created but could not be loaded.");
+  /*
+   * create_staff_job() RETURNS public.jobs,
+   * so Supabase returns one object rather than an array.
+   */
+  if (!data) {
+    throw new Error(
+      "Job was created but no job data was returned.",
+    );
   }
-
-  return toStaffJob(rows[0]);
+  return toStaffJob(data as unknown as DatabaseJob);
 }
-
 /**
  * Updates the current job status.
  *
- * The database trigger automatically creates a status-history entry
- * whenever the status changes.
+ * The database trigger automatically creates a status-history
+ * entry whenever the status changes.
  */
 export async function updateStatus(
   id: string,
@@ -312,15 +296,14 @@ export async function updateStatus(
   if (!id) {
     throw new Error("Job ID is required.");
   }
-
   if (!isValidStatus(status)) {
     throw new Error("Invalid status.");
   }
-
   const { data, error } = await supabase
     .from("jobs")
     .update({
       status,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .select(
@@ -333,15 +316,12 @@ export async function updateStatus(
       `,
     )
     .single();
-
   if (error) {
     console.error("Failed to update status:", error);
     throw new Error("Unable to update job status.");
   }
-
   return toStaffJob(data as DatabaseJob);
 }
-
 /**
  * Updates internal staff notes.
  *
@@ -354,11 +334,11 @@ export async function updateNotes(
   if (!id) {
     throw new Error("Job ID is required.");
   }
-
   const { data, error } = await supabase
     .from("jobs")
     .update({
       notes: notes.trim() || null,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .select(
@@ -371,28 +351,22 @@ export async function updateNotes(
       `,
     )
     .single();
-
   if (error) {
     console.error("Failed to update notes:", error);
     throw new Error("Unable to save staff notes.");
   }
-
   return toStaffJob(data as DatabaseJob);
 }
-
 export function useStaffJobs(enabled = true) {
   const [jobs, setJobs] = useState<StaffJob[]>([]);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
-
   const refresh = useCallback(async () => {
     if (!enabled) {
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
       const result = await listJobs();
       setJobs(result);
@@ -401,19 +375,16 @@ export function useStaffJobs(enabled = true) {
         err instanceof Error
           ? err.message
           : "Unable to load jobs.";
-
       setError(message);
     } finally {
       setLoading(false);
     }
   }, [enabled]);
-
   useEffect(() => {
     if (enabled) {
       void refresh();
     }
   }, [enabled, refresh]);
-
   return {
     jobs,
     loading,
@@ -421,14 +392,11 @@ export function useStaffJobs(enabled = true) {
     refresh,
   };
 }
-
 export function formatTime(value: string): string {
   const date = new Date(value);
-
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-
   return date.toLocaleString(undefined, {
     day: "2-digit",
     month: "short",
