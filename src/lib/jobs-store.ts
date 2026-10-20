@@ -154,10 +154,11 @@ export async function lookupJob(code: string): Promise<Job | null> {
     throw new Error("Unable to load vehicle progress.");
   }
   const rows = (data ?? []) as PublicLookupRow[];
-  if (rows.length === 0) {
+  const firstRow = rows[0];
+  if (!firstRow) {
     return null;
   }
-  return toCustomerJob(rows[0]);
+  return toCustomerJob(firstRow);
 }
 /**
  * Loads all jobs for authenticated staff.
