@@ -16,7 +16,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Track Your Vehicle | Lavage International" },
       {
         property: "og:description",
-        content: "Follow your car wash and detailing progress with your Lavage International tracking code.",
+        content:
+          "Follow your car wash and detailing progress with your Lavage International tracking code.",
       },
     ],
   }),

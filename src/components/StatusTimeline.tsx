@@ -14,17 +14,10 @@ export function StatusTimeline({ job }: { job: Job }) {
           const active = i === currentIndex;
           const upcoming = i > currentIndex;
 
-          const entry = job.history.find(
-            (historyEntry) => historyEntry.status === status,
-          );
+          const entry = job.history.find((historyEntry) => historyEntry.status === status);
 
           return (
-            <div
-              key={status}
-              className={`flex items-center gap-4 ${
-                upcoming ? "opacity-40" : ""
-              }`}
-            >
+            <div key={status} className={`flex items-center gap-4 ${upcoming ? "opacity-40" : ""}`}>
               {/* Status indicator */}
               <div
                 className={`flex size-8 shrink-0 items-center justify-center rounded-full border-4 border-card ${
@@ -50,9 +43,7 @@ export function StatusTimeline({ job }: { job: Job }) {
               <div className="min-w-0 flex-1">
                 <p
                   className={`text-sm ${
-                    done || active
-                      ? "font-bold text-card-foreground"
-                      : "font-medium"
+                    done || active ? "font-bold text-card-foreground" : "font-medium"
                   }`}
                 >
                   {status}
@@ -63,9 +54,7 @@ export function StatusTimeline({ job }: { job: Job }) {
                     In progress
                   </p>
                 ) : entry ? (
-                  <p className="text-[10px] text-muted-foreground">
-                    {formatTime(entry.at)}
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">{formatTime(entry.at)}</p>
                 ) : null}
               </div>
             </div>

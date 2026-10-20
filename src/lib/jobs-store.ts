@@ -65,12 +65,10 @@ type PublicLookupRow = {
   status: string;
   created_at: string;
   updated_at: string | null;
-  history:
-    | Array<{
-        status: string;
-        at: string;
-      }>
-    | null;
+  history: Array<{
+    status: string;
+    at: string;
+  }> | null;
 };
 function isValidStatus(value: string): value is Status {
   return STATUSES.includes(value as Status);
@@ -99,11 +97,7 @@ function normalizeHistory(
       status: normalizeStatus(entry.status),
       at: entry.changed_at,
     }))
-    .sort(
-      (a, b) =>
-        new Date(a.at).getTime() -
-        new Date(b.at).getTime(),
-    );
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
 }
 function toStaffJob(row: DatabaseJob): StaffJob {
   return {
@@ -137,11 +131,7 @@ function toCustomerJob(row: PublicLookupRow): Job {
         status: normalizeStatus(entry.status),
         at: entry.at,
       }))
-      .sort(
-        (a, b) =>
-          new Date(a.at).getTime() -
-          new Date(b.at).getTime(),
-      ),
+      .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()),
   };
 }
 /**
@@ -151,19 +141,14 @@ function toCustomerJob(row: PublicLookupRow): Job {
  * The RPC intentionally does NOT expose customer phone numbers
  * or internal staff notes.
  */
-export async function lookupJob(
-  code: string,
-): Promise<Job | null> {
+export async function lookupJob(code: string): Promise<Job | null> {
   const normalizedCode = code.trim().toUpperCase();
   if (!normalizedCode) {
     return null;
   }
-  const { data, error } = await supabase.rpc(
-    "public_job_lookup",
-    {
-      p_code: normalizedCode,
-    },
-  );
+  const { data, error } = await supabase.rpc("public_job_lookup", {
+    p_code: normalizedCode,
+  });
   if (error) {
     console.error("Customer job lookup failed:", error);
     throw new Error("Unable to load vehicle progress.");
@@ -239,47 +224,31 @@ export async function createJob(input: {
   if (!isValidStatus(input.status)) {
     throw new Error("Invalid initial status.");
   }
-  const { data, error } = await supabase.rpc(
-    "create_staff_job",
-    {
-      p_customer_name: customerName,
-      p_phone: phone,
-      p_vehicle: vehicle,
-      p_plate: plate,
-      p_service: service,
-      p_status: input.status,
-      p_notes: notes || null,
-    },
-  );
+  const { data, error } = await supabase.rpc("create_staff_job", {
+    p_customer_name: customerName,
+    p_phone: phone,
+    p_vehicle: vehicle,
+    p_plate: plate,
+    p_service: service,
+    p_status: input.status,
+    p_notes: notes || null,
+  });
   if (error) {
     console.error("Failed to create job:", error);
-    if (
-      error.code === "23505" ||
-      error.message.toLowerCase().includes("duplicate")
-    ) {
-      throw new Error(
-        "A tracking code conflict occurred. Please try creating the job again.",
-      );
+    if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
+      throw new Error("A tracking code conflict occurred. Please try creating the job again.");
     }
-    if (
-      error.message.toLowerCase().includes("authentication required")
-    ) {
-      throw new Error(
-        "You must be signed in to the Staff Portal to create a job.",
-      );
+    if (error.message.toLowerCase().includes("authentication required")) {
+      throw new Error("You must be signed in to the Staff Portal to create a job.");
     }
-    throw new Error(
-      error.message || "Unable to create job.",
-    );
+    throw new Error(error.message || "Unable to create job.");
   }
   /*
    * create_staff_job() RETURNS public.jobs,
    * so Supabase returns one object rather than an array.
    */
   if (!data) {
-    throw new Error(
-      "Job was created but no job data was returned.",
-    );
+    throw new Error("Job was created but no job data was returned.");
   }
   return toStaffJob(data as unknown as DatabaseJob);
 }
@@ -289,10 +258,7 @@ export async function createJob(input: {
  * The database trigger automatically creates a status-history
  * entry whenever the status changes.
  */
-export async function updateStatus(
-  id: string,
-  status: Status,
-): Promise<StaffJob> {
+export async function updateStatus(id: string, status: Status): Promise<StaffJob> {
   if (!id) {
     throw new Error("Job ID is required.");
   }
@@ -327,10 +293,7 @@ export async function updateStatus(
  *
  * These notes are never exposed by public_job_lookup().
  */
-export async function updateNotes(
-  id: string,
-  notes: string,
-): Promise<StaffJob> {
+export async function updateNotes(id: string, notes: string): Promise<StaffJob> {
   if (!id) {
     throw new Error("Job ID is required.");
   }
@@ -371,10 +334,7 @@ export function useStaffJobs(enabled = true) {
       const result = await listJobs();
       setJobs(result);
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Unable to load jobs.";
+      const message = err instanceof Error ? err.message : "Unable to load jobs.";
       setError(message);
     } finally {
       setLoading(false);

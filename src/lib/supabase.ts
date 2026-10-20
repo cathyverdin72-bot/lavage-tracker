@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env['VITE_SUPABASE_URL'] as string | undefined;
-const publishableKey = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] as string | undefined;
+const url = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
+const publishableKey = import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] as string | undefined;
 
 export const isSupabaseConfigured = Boolean(url && publishableKey);
 
@@ -15,10 +15,14 @@ if (!isSupabaseConfigured && typeof window !== "undefined") {
  * Browser Supabase client using the publishable/anon key only.
  * All access is protected by Row Level Security in supabase/schema.sql.
  */
-export const supabase = createClient(url ?? "https://placeholder.supabase.co", publishableKey ?? "public-anon-key", {
-  auth: {
-    persistSession: typeof window !== "undefined",
-    autoRefreshToken: typeof window !== "undefined",
-    detectSessionInUrl: typeof window !== "undefined",
+export const supabase = createClient(
+  url ?? "https://placeholder.supabase.co",
+  publishableKey ?? "public-anon-key",
+  {
+    auth: {
+      persistSession: typeof window !== "undefined",
+      autoRefreshToken: typeof window !== "undefined",
+      detectSessionInUrl: typeof window !== "undefined",
+    },
   },
-});
+);
