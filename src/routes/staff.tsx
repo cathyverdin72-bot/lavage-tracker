@@ -1,3 +1,4 @@
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -54,7 +55,9 @@ function StaffPage() {
   if (authLoading) {
     return (
       <AppShell>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Loading…</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Loading…
+        </p>
       </AppShell>
     );
   }
@@ -77,19 +80,24 @@ function StaffDashboard() {
   const [created, setCreated] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
-  const active = jobs.filter((j) => j.status !== "Completed");
+  const active = jobs.filter((job) => job.status !== "Completed");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+
     try {
       const job = await createJob(form);
+
       setForm(emptyForm);
       setShowForm(false);
-      setCreated(job.code);
+      setCreated(job.trackingCode);
       setActionError("");
+
       await refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Could not create job.");
+      setActionError(
+        err instanceof Error ? err.message : "Could not create job."
+      );
     }
   }
 
@@ -99,7 +107,9 @@ function StaffDashboard() {
       setActionError("");
       await refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Could not update status.");
+      setActionError(
+        err instanceof Error ? err.message : "Could not update status."
+      );
     }
   }
 
@@ -109,7 +119,9 @@ function StaffDashboard() {
       setActionError("");
       await refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Could not update notes.");
+      setActionError(
+        err instanceof Error ? err.message : "Could not update notes."
+      );
     }
   }
 
@@ -119,23 +131,30 @@ function StaffDashboard() {
         <button
           type="button"
           onClick={() => {
-            setShowForm((v) => !v);
+            setShowForm((value) => !value);
             setCreated(null);
           }}
           className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 text-center active:scale-95"
         >
           <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-primary/10">
-            <span className="text-xl font-bold text-primary">{showForm ? "×" : "+"}</span>
+            <span className="text-xl font-bold text-primary">
+              {showForm ? "×" : "+"}
+            </span>
           </div>
           <span className="text-[10px] font-bold uppercase text-card-foreground">
             {showForm ? "Close" : "New Job"}
           </span>
         </button>
+
         <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 text-center">
           <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-warning/10">
-            <span className="text-sm font-bold text-warning">{active.length}</span>
+            <span className="text-sm font-bold text-warning">
+              {active.length}
+            </span>
           </div>
-          <span className="text-[10px] font-bold uppercase text-card-foreground">Active</span>
+          <span className="text-[10px] font-bold uppercase text-card-foreground">
+            Active
+          </span>
         </div>
       </section>
 
@@ -147,6 +166,7 @@ function StaffDashboard() {
         >
           {loading ? "Loading…" : "Refresh"}
         </button>
+
         <button
           type="button"
           onClick={() => void signOut()}
@@ -169,17 +189,24 @@ function StaffDashboard() {
       )}
 
       {showForm && (
-        <form onSubmit={submit} className="space-y-3 rounded-2xl border border-border bg-card p-6 shadow-xl">
+        <form
+          onSubmit={submit}
+          className="space-y-3 rounded-2xl border border-border bg-card p-6 shadow-xl"
+        >
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             New Vehicle Job
           </h2>
+
           <input
             required
             className={fieldClass}
             placeholder="Customer name"
             value={form.customerName}
-            onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, customerName: e.target.value })
+            }
           />
+
           <input
             required
             type="tel"
@@ -188,6 +215,7 @@ function StaffDashboard() {
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
           />
+
           <input
             required
             className={fieldClass}
@@ -195,6 +223,7 @@ function StaffDashboard() {
             value={form.vehicle}
             onChange={(e) => setForm({ ...form, vehicle: e.target.value })}
           />
+
           <input
             required
             className={fieldClass}
@@ -202,28 +231,33 @@ function StaffDashboard() {
             value={form.plate}
             onChange={(e) => setForm({ ...form, plate: e.target.value })}
           />
+
           <select
             className={fieldClass}
             value={form.service}
             onChange={(e) => setForm({ ...form, service: e.target.value })}
           >
-            {SERVICES.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {SERVICES.map((service) => (
+              <option key={service} value={service}>
+                {service}
               </option>
             ))}
           </select>
+
           <select
             className={fieldClass}
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value as Status })}
+            onChange={(e) =>
+              setForm({ ...form, status: e.target.value as Status })
+            }
           >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status}
               </option>
             ))}
           </select>
+
           <textarea
             rows={3}
             className={fieldClass}
@@ -231,6 +265,7 @@ function StaffDashboard() {
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
+
           <button
             type="submit"
             className="w-full rounded-2xl bg-primary py-4 font-bold text-primary-foreground shadow-[var(--shadow-cta)] active:scale-95"
@@ -244,8 +279,14 @@ function StaffDashboard() {
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           All Jobs
         </p>
+
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} onStatus={changeStatus} onNotes={saveNotes} />
+          <JobCard
+            key={job.id}
+            job={job}
+            onStatus={changeStatus}
+            onNotes={saveNotes}
+          />
         ))}
       </section>
     </AppShell>
@@ -268,18 +309,28 @@ function JobCard({
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-card-foreground">{job.vehicle}</p>
+          <p className="truncate text-sm font-bold text-card-foreground">
+            {job.vehicle}
+          </p>
+
           <p className="truncate text-[11px] text-muted-foreground">
             {job.customerName} · {job.phone}
           </p>
+
           <p className="font-mono text-[11px] text-muted-foreground">
-            {job.plate} · {job.code}
+            {job.plate} · {job.trackingCode}
           </p>
-          <p className="mt-1 text-[11px] text-card-foreground">{job.service}</p>
+
+          <p className="mt-1 text-[11px] text-card-foreground">
+            {job.service}
+          </p>
         </div>
+
         <span
           className={`shrink-0 rounded px-2 py-1 text-[10px] font-bold uppercase ${
-            job.status === "Completed" ? "bg-success/10 text-success" : "bg-primary/10 text-primary"
+            job.status === "Completed"
+              ? "bg-success/10 text-success"
+              : "bg-primary/10 text-primary"
           }`}
         >
           {job.status}
@@ -288,14 +339,17 @@ function JobCard({
 
       <label className="mt-3 block">
         <span className="sr-only">Update status for {job.plate}</span>
+
         <select
           value={job.status}
-          onChange={(e) => void onStatus(job.id, e.target.value as Status)}
+          onChange={(e) =>
+            void onStatus(job.id, e.target.value as Status)
+          }
           className="h-12 w-full rounded-xl border border-border bg-background px-3 text-sm font-bold uppercase tracking-wide text-primary focus:outline-none"
         >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
+          {STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
             </option>
           ))}
         </select>
@@ -303,6 +357,7 @@ function JobCard({
 
       <label className="mt-3 block">
         <span className="sr-only">Staff notes for {job.plate}</span>
+
         <textarea
           rows={2}
           value={notes}
@@ -311,6 +366,7 @@ function JobCard({
           className={fieldClass}
         />
       </label>
+
       {dirty && (
         <button
           type="button"
