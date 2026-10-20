@@ -94,7 +94,7 @@ function TrackPage() {
           <div className="flex items-end justify-between">
             <h2 className="text-lg font-bold text-card-foreground">Current Status</h2>
             <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold uppercase text-primary">
-              {job.code}
+              {job.trackingCode}
             </span>
           </div>
 
@@ -114,7 +114,7 @@ function TrackPage() {
 
             <button
               type="button"
-              onClick={() => void fetchJob(job.code)}
+              onClick={() => void fetchJob(job.trackingCode)}
               disabled={loading}
               className="mt-6 w-full rounded-xl border border-border bg-background py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground active:bg-secondary disabled:opacity-50"
             >
