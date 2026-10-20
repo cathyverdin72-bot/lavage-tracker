@@ -90,6 +90,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_staff_job: {
+        Args: {
+          p_customer_name: string
+          p_notes?: string
+          p_phone: string
+          p_plate: string
+          p_service: string
+          p_status: Database["public"]["Enums"]["job_status"]
+          p_vehicle: string
+        }
+        Returns: {
+          created_at: string
+          customer_name: string
+          id: string
+          notes: string
+          phone: string
+          plate: string
+          service: string
+          status: Database["public"]["Enums"]["job_status"]
+          tracking_code: string
+          updated_at: string
+          vehicle: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       public_job_lookup: {
         Args: { p_code: string }
         Returns: {
