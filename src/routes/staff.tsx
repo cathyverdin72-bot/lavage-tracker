@@ -125,9 +125,7 @@ className=“flex flex-col items-center justify-center rounded-xl border border-
       <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-warning/10">
         <span className="text-sm font-bold text-warning">{active.length}</span>
       </div>
-      <span className="text-[10px] font-bold uppercase text-card-foreground">
-        Active
-      </span>
+      <span className="text-[10px] font-bold uppercase text-card-foreground">Active</span>
     </div>
   </section>
   <div className="flex items-center justify-between">
@@ -235,12 +233,7 @@ className=“flex flex-col items-center justify-center rounded-xl border border-
       All Jobs
     </p>
     {jobs.map((job) => (
-      <JobCard
-        key={job.id}
-        job={job}
-        onStatus={changeStatus}
-        onNotes={saveNotes}
-      />
+      <JobCard key={job.id} job={job} onStatus={changeStatus} onNotes={saveNotes} />
     ))}
   </section>
 </AppShell>
