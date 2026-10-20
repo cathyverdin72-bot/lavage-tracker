@@ -14,16 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      job_status_history: {
+        Row: {
+          changed_at: string
+          id: string
+          job_id: string
+          status: Database["public"]["Enums"]["job_status"]
+        }
+        Insert: {
+          changed_at?: string
+          id?: string
+          job_id: string
+          status: Database["public"]["Enums"]["job_status"]
+        }
+        Update: {
+          changed_at?: string
+          id?: string
+          job_id?: string
+          status?: Database["public"]["Enums"]["job_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_status_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          created_at: string
+          customer_name: string
+          id: string
+          notes: string
+          phone: string
+          plate: string
+          service: string
+          status: Database["public"]["Enums"]["job_status"]
+          tracking_code: string
+          updated_at: string
+          vehicle: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          id?: string
+          notes?: string
+          phone?: string
+          plate: string
+          service: string
+          status?: Database["public"]["Enums"]["job_status"]
+          tracking_code: string
+          updated_at?: string
+          vehicle: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          id?: string
+          notes?: string
+          phone?: string
+          plate?: string
+          service?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          tracking_code?: string
+          updated_at?: string
+          vehicle?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      public_job_lookup: {
+        Args: { p_code: string }
+        Returns: {
+          created_at: string
+          history: Json
+          plate: string
+          service: string
+          status: string
+          tracking_code: string
+          updated_at: string
+          vehicle: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      job_status:
+        | "Car Received"
+        | "Inspection"
+        | "Washing"
+        | "Detailing"
+        | "Quality Check"
+        | "Ready for Pickup"
+        | "Completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +239,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      job_status: [
+        "Car Received",
+        "Inspection",
+        "Washing",
+        "Detailing",
+        "Quality Check",
+        "Ready for Pickup",
+        "Completed",
+      ],
+    },
   },
 } as const
