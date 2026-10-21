@@ -97,7 +97,9 @@ function normalizeHistory(
       status: normalizeStatus(entry.status),
       at: entry.changed_at,
     }))
-    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+    .sort(
+      (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
+    );
 }
 function toStaffJob(row: DatabaseJob): StaffJob {
   return {
@@ -131,7 +133,9 @@ function toCustomerJob(row: PublicLookupRow): Job {
         status: normalizeStatus(entry.status),
         at: entry.at,
       }))
-      .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()),
+      .sort(
+        (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
+      ),
   };
 }
 /**
@@ -169,15 +173,13 @@ export async function lookupJob(code: string): Promise<Job | null> {
 export async function listJobs(): Promise<StaffJob[]> {
   const { data, error } = await supabase
     .from("jobs")
-    .select(
-      `
-        *,
-        job_status_history (
-          status,
-          changed_at
-        )
-      `,
-    )
+    .select(`
+      *,
+      job_status_history (
+        status,
+        changed_at
+      )
+    `)
     .order("created_at", { ascending: false });
   if (error) {
     console.error("Failed to load staff jobs:", error);
@@ -236,22 +238,43 @@ export async function createJob(input: {
   });
   if (error) {
     console.error("Failed to create job:", error);
-    if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
-      throw new Error("A tracking code conflict occurred. Please try creating the job again.");
+    if (
+      error.code === "23505" ||
+      error.message.toLowerCase().includes("duplicate")
+    ) {
+      throw new Error(
+        "A tracking code conflict occurred. Please try creating the job again.",
+      );
     }
-    if (error.message.toLowerCase().includes("authentication required")) {
-      throw new Error("You must be signed in to the Staff Portal to create a job.");
+    if (
+      error.message.toLowerCase().includes("authentication required") ||
+      error.message.toLowerCase().includes("authorized staff access required")
+    ) {
+      throw new Error(
+        "You must be signed in with an authorized staff account to create a job.",
+      );
     }
     throw new Error(error.message || "Unable to create job.");
   }
   /*
-   * create_staff_job() RETURNS public.jobs,
-   * so Supabase returns one object rather than an array.
+   * The create_staff_job() PostgreSQL function returns SETOF jobs.
+   * Supabase may therefore return an array of rows rather than
+   * a single job object. Handle both shapes safely.
    */
-  if (!data) {
-    throw new Error("Job was created but no job data was returned.");
+  const returnedRow = Array.isArray(data) ? data[0] : data;
+  if (!returnedRow) {
+    throw new Error(
+      "The database did not return the new job. Check the jobs list before trying again.",
+    );
   }
-  return toStaffJob(data as unknown as DatabaseJob);
+  const row = returnedRow as unknown as DatabaseJob;
+  if (!row.id || !row.tracking_code || !row.status) {
+    console.error("Unexpected create_staff_job response:", returnedRow);
+    throw new Error(
+      "The database returned incomplete job details. Check the jobs list before trying again.",
+    );
+  }
+  return toStaffJob(row);
 }
 /**
  * Updates the current job status.
@@ -259,7 +282,10 @@ export async function createJob(input: {
  * The database trigger automatically creates a status-history
  * entry whenever the status changes.
  */
-export async function updateStatus(id: string, status: Status): Promise<StaffJob> {
+export async function updateStatus(
+  id: string,
+  status: Status,
+): Promise<StaffJob> {
   if (!id) {
     throw new Error("Job ID is required.");
   }
@@ -273,15 +299,13 @@ export async function updateStatus(id: string, status: Status): Promise<StaffJob
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .select(
-      `
-        *,
-        job_status_history (
-          status,
-          changed_at
-        )
-      `,
-    )
+    .select(`
+      *,
+      job_status_history (
+        status,
+        changed_at
+      )
+    `)
     .single();
   if (error) {
     console.error("Failed to update status:", error);
@@ -294,7 +318,10 @@ export async function updateStatus(id: string, status: Status): Promise<StaffJob
  *
  * These notes are never exposed by public_job_lookup().
  */
-export async function updateNotes(id: string, notes: string): Promise<StaffJob> {
+export async function updateNotes(
+  id: string,
+  notes: string,
+): Promise<StaffJob> {
   if (!id) {
     throw new Error("Job ID is required.");
   }
@@ -305,15 +332,13 @@ export async function updateNotes(id: string, notes: string): Promise<StaffJob> 
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .select(
-      `
-        *,
-        job_status_history (
-          status,
-          changed_at
-        )
-      `,
-    )
+    .select(`
+      *,
+      job_status_history (
+        status,
+        changed_at
+      )
+    `)
     .single();
   if (error) {
     console.error("Failed to update notes:", error);
@@ -335,7 +360,8 @@ export function useStaffJobs(enabled = true) {
       const result = await listJobs();
       setJobs(result);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to load jobs.";
+      const message =
+        err instanceof Error ? err.message : "Unable to load jobs.";
       setError(message);
     } finally {
       setLoading(false);
